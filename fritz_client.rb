@@ -37,8 +37,6 @@ class FritzClient
 
   end
 
-
-
   # Change configuration parameters
   # Example: change_settings({"telcfg:settings/Diversity0/Active" => 0})
   # @param [Hash] params
@@ -52,7 +50,39 @@ class FritzClient
     end
   end
 
+  # Collect fon configuration
+  # @return [Hash] cfg
+  # @todo rescue from Faraday::Error::TimeoutError
+  def foncalls_cfg
+    cfg = {}
+    response = @conn.get do |req|
+      req.url @uri[:settings]
+      req.params['sid'] = @sid
+      req.params['getpage'] = "../html/de/menus/menu2.html"
+      req.params['var:pagename'] = 'foncalls'
+      req.params['var:menu'] = 'fon'
+    end
+    doc = Nokogiri::HTML(response.body)
+    elements = doc.xpath(select="//*[contains(@name,'cfg')]")
+    elements.each do |e|
+      cfg[e.attributes["name"].content] = e.attributes["value"].content
+    end
+    return cfg
+  end
 
+  #def get_settings()
+  #  @pages = {
+  #      "home" => ["home"],
+  #      "internet" => ["inetstat", "pppoe", "userlist", "portfw", "overview"],
+  #      "fon" => ["foncalls", "fonbuch", "wecker", "rulall", "routing", "fondevices", "siplist", "laender"],
+  #      "net" => ["net", "status", "einstellungen"],
+  #      "wlan" => ["common", "monitor", "encrypt2", "guest_access"],
+  #      "dect" => ["settings"],
+  #
+  #      #"system" => ["syslog.lua", "energy.lua", "push.lua", "infoled.lua", "wlan_night.lua", "kenntwort.lua", "export.lua", "update.lua", "reboot.lua", "export.lua", "zeitzone", "sprache"]
+  #
+  #  }
+  #end
 
   # Login to obtain the session-id
   # Initiate and set session if authentication was successful
@@ -95,11 +125,6 @@ class FritzClient
     fritz_response(session_info["SessionInfo"]["Challenge"])
   end
 
-
-  #def get_page(page=nil)
-  #  @page = page || "/cgi-bin/webcm?getpage=../html/de/menus/menu2.html"
-  #  response = @conn.get @page
-  #end
 
   #  def enable_or_disable(telcfg)
   #  end
