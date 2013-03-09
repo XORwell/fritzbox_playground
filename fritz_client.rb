@@ -11,6 +11,7 @@ require 'iconv'
 
 class FritzClient
 
+  #@todo rescue from Faraday::Error::TimeoutError: Connection time-out
   def initialize(hostname, password, verbose=false)
     @sid = nil
     @hostname = hostname
@@ -20,7 +21,8 @@ class FritzClient
         :login => "/login.lua",
         :login_sid => "/login_sid.lua",
         :home => "/home/home.lua",
-        :webcm => "/cgi-bin/webcm"
+        :webcm => "/cgi-bin/webcm",
+        :system_status => "/cgi-bin/system_status"
     }
     @parser = Nori.new(:parser => :nokogiri)
     @conn = Faraday.new(:url => "http://#{@hostname}") do |faraday|
@@ -84,6 +86,13 @@ class FritzClient
   #  }
   #end
 
+  # Display system status information
+  # @return [String] system_status
+  def system_status
+    status = @parser.parse(Nokogiri::XML(open("http://#{@hostname}#{@uri[:system_status]}")).to_s)
+    return status["html"]["body"]
+  end
+
   # Login to obtain the session-id
   # Initiate and set session if authentication was successful
   # @return [Boolean] true if authentication was successful
@@ -101,33 +110,31 @@ class FritzClient
     return (@sid.nil?) ? false : true
   end
 
-  # Obtain challenge ID
   protected
-  def session_info
-    @parser.parse(Nokogiri::XML(open("http://#{@hostname}#{@uri[:login_sid]}")).to_s)
-  end
+    # Obtain challenge ID
+    def session_info
+      @parser.parse(Nokogiri::XML(open("http://#{@hostname}#{@uri[:login_sid]}")).to_s)
+    end
 
-  # Create response String
-  # for more information: http://www.avm.de/de/Extern/files/session_id/AVM_Technical_Note_-_Session_ID.pdf
-  # @return [String] response
-  protected
-  def fritz_response(challenge)
-    @md5magic = Digest::MD5.hexdigest(Iconv.conv('UTF-16LE', 'UTF-8', "#{challenge}-#{@password}"))
-    @response = "#{challenge}-#{@md5magic}"
-  end
+    # Create response String
+    # for more information: http://www.avm.de/de/Extern/files/session_id/AVM_Technical_Note_-_Session_ID.pdf
+    # @return [String] response
+    def fritz_response(challenge)
+      @md5magic = Digest::MD5.hexdigest(Iconv.conv('UTF-16LE', 'UTF-8', "#{challenge}-#{@password}"))
+      @response = "#{challenge}-#{@md5magic}"
+    end
 
-  # Obtain challenge and create response
-  # @see session_info
-  # @see fritz_response
-  # @return [String] response
-  protected
-  def build_response
-    fritz_response(session_info["SessionInfo"]["Challenge"])
-  end
+    # Obtain challenge and create response
+    # @see session_info
+    # @see fritz_response
+    # @return [String] response
+    def build_response
+      fritz_response(session_info["SessionInfo"]["Challenge"])
+    end
 
 
   #  def enable_or_disable(telcfg)
   #  end
-  #  alias_method :switch, :enable_or_disable
+  #  alias_method :toggle, :enable_or_disable
 
 end
