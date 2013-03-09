@@ -91,7 +91,7 @@ class FritzClient
   def login
     response = @conn.post do |req|
       req.url @uri[:login]
-      req.body = { "response" => self.build_response, "get_page" => @uri[:home], }
+      req.body = { "response" => self.build_response }
     end
 
     if response.headers.include?("Location")
