@@ -11,7 +11,7 @@ require 'iconv'
 
 class FritzClient
 
-  def initialize(hostname, password)
+  def initialize(hostname, password, verbose=false)
     @sid = nil
     @hostname = hostname
     @password = password
@@ -25,7 +25,7 @@ class FritzClient
     @parser = Nori.new(:parser => :nokogiri)
     @conn = Faraday.new(:url => "http://#{@hostname}") do |faraday|
       faraday.request  :url_encoded             # form-encode POST params
-      faraday.response :logger                  # log requests to STDOUT
+      faraday.response :logger if verbose # log requests to STDOUT
       faraday.adapter :patron do |session|
         session.handle_cookies
       end
